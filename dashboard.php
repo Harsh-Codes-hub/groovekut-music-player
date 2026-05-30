@@ -1,0 +1,273 @@
+<?php
+// ============================================================
+// GrooveKut — Dashboard
+// File: dashboard.php
+// ============================================================
+
+require_once 'includes/session_helper.php';
+require_login();
+
+$user_id  = current_user_id();
+$username = $_SESSION['username'];
+$mood     = current_mood();
+
+// ── Fetch play history count ──────────────────────────────────
+$history_count = 0;
+$res = $conn->query("SELECT COUNT(*) as c FROM play_history WHERE user_id = $user_id");
+if ($res) $history_count = $res->fetch_assoc()['c'];
+
+// ── Greeting by time ─────────────────────────────────────────
+$hour = (int)date('G');
+if ($hour < 12)      $greeting = 'Good morning';
+elseif ($hour < 17)  $greeting = 'Good afternoon';
+else                 $greeting = 'Good evening';
+
+// ── Mood playlist rows (5 moods always exist) ────────────────
+$moods = [
+    'happy' => '😄',
+    'chill' => '😌',
+    'focus' => '🎯',
+    'sad'   => '🌧️',
+    'hype'  => '🔥',
+];
+
+// ── Genre browse cards (from songs table, distinct genres) ───
+$genre_rows = $conn->query("SELECT DISTINCT genre FROM songs ORDER BY genre");
+$genres_all = [];
+while ($g = $genre_rows->fetch_assoc()) {
+    $genres_all[] = $g['genre'];
+}
+
+// ── Recently played (last 6) ─────────────────────────────────
+$recent_songs = [];
+if ($history_count > 0) {
+    $res = $conn->query(
+        "SELECT s.id, s.title, s.artist, s.cover_path, s.mood_tag
+         FROM play_history ph
+         JOIN songs s ON s.id = ph.song_id
+         WHERE ph.user_id = $user_id
+         ORDER BY ph.played_at DESC
+         LIMIT 6"
+    );
+    while ($row = $res->fetch_assoc()) {
+        $recent_songs[] = $row;
+    }
+}
+
+// ── New user: pull 12 random songs to fill the library row ───
+$starter_songs = [];
+$res = $conn->query("SELECT id, title, artist, cover_path, mood_tag FROM songs ORDER BY RAND() LIMIT 12");
+while ($row = $res->fetch_assoc()) {
+    $starter_songs[] = $row;
+}
+
+$page_title = 'Home';
+require_once 'includes/header.php';
+?>
+
+<!-- ══════════════════════════════════════════════════════════
+     ONBOARDING MODAL — shows only on first login
+═══════════════════════════════════════════════════════════════ -->
+<?php if (needs_onboarding()): ?>
+<div class="modal-overlay" id="onboarding-overlay">
+  <div class="modal-card onboarding-card">
+
+    <div class="onboarding-header">
+      <h2>What do you want to hear? 🎵</h2>
+      <p>Pick up to 3 genres and we'll set up your playlists instantly.</p>
+    </div>
+
+    <div class="genre-grid" id="genre-grid">
+      <?php
+      $genre_icons = [
+        'Pop'        => '🎤',
+        'Hip-Hop'    => '🎧',
+        'Lo-fi'      => '☕',
+        'Electronic' => '⚡',
+        'Indie'      => '🎸',
+        'R&B'        => '🎷',
+        'Rock'       => '🤘',
+        'Classical'  => '🎻',
+        'Punjabi'    => '🥁',
+        'Bollywood'  => '🎬',
+      ];
+      foreach ($genre_icons as $g => $icon): ?>
+        <div class="genre-chip" data-genre="<?= $g ?>">
+          <span class="genre-icon"><?= $icon ?></span>
+          <span class="genre-label"><?= $g ?></span>
+        </div>
+      <?php endforeach; ?>
+    </div>
+
+    <div class="onboarding-actions">
+      <button class="btn-primary" id="save-genres-btn" disabled>Start Listening →</button>
+      <button class="btn-ghost" id="skip-onboarding-btn">Skip for now</button>
+    </div>
+
+  </div>
+</div>
+<?php endif; ?>
+
+<!-- ══════════════════════════════════════════════════════════
+     DASHBOARD CONTENT
+═══════════════════════════════════════════════════════════════ -->
+
+<?php if ($history_count >= 5): ?>
+  <!-- RETURNING USER — rich dashboard -->
+
+  <section class="dash-hero">
+    <div class="hero-text">
+      <h1><?= $greeting ?>, <span class="accent"><?= htmlspecialchars($username) ?></span> 👋</h1>
+      <p>Here's what's waiting for you.</p>
+    </div>
+    <div class="mood-badge mood-<?= $mood ?>">
+      <?= ucfirst($mood) ?> vibes
+    </div>
+  </section>
+
+  <!-- Mood rows -->
+  <section class="dash-section">
+    <h2 class="section-title">Browse by Mood</h2>
+    <div class="mood-row">
+      <?php foreach ($moods as $m => $emoji): ?>
+        <a href="/groovekut/library.php?mood=<?= $m ?>" class="mood-card mood-<?= $m ?>">
+          <span class="mood-emoji"><?= $emoji ?></span>
+          <span class="mood-name"><?= ucfirst($m) ?></span>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <!-- Recently played -->
+  <?php if (!empty($recent_songs)): ?>
+  <section class="dash-section">
+    <h2 class="section-title">Recently Played</h2>
+    <div class="song-row">
+      <?php foreach ($recent_songs as $s): ?>
+        <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="song-card">
+          <div class="song-cover">
+            <?php if ($s['cover_path']): ?>
+              <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover"/>
+            <?php else: ?>
+              <div class="cover-placeholder">🎵</div>
+            <?php endif; ?>
+          </div>
+          <div class="song-info">
+            <p class="song-title"><?= htmlspecialchars($s['title']) ?></p>
+            <p class="song-artist"><?= htmlspecialchars($s['artist']) ?></p>
+          </div>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+  <?php endif; ?>
+
+  <!-- Recommendations link -->
+  <section class="dash-section">
+    <a href="/groovekut/recommendations.php" class="rec-banner">
+      <span>🎯 See your personalised recommendations</span>
+      <span class="arrow">→</span>
+    </a>
+  </section>
+
+<?php else: ?>
+  <!-- NEW / LOW-HISTORY USER — starter dashboard -->
+
+  <section class="dash-hero">
+    <div class="hero-text">
+      <h1>Start Listening 🎵</h1>
+      <p>Discover music. The more you play, the smarter GrooveKut gets.</p>
+    </div>
+    <a href="/groovekut/search.php" class="btn-primary hero-search-btn">Search Songs</a>
+  </section>
+
+  <!-- Browse by genre -->
+  <section class="dash-section">
+    <h2 class="section-title">Browse by Genre</h2>
+    <div class="genre-browse-row">
+      <?php foreach ($genres_all as $g): ?>
+        <a href="/groovekut/library.php?genre=<?= urlencode($g) ?>" class="genre-browse-card">
+          <?= htmlspecialchars($g) ?>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+  <!-- Starter songs -->
+  <section class="dash-section">
+    <h2 class="section-title">Songs to Get You Started</h2>
+    <div class="song-row">
+      <?php foreach ($starter_songs as $s): ?>
+        <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="song-card">
+          <div class="song-cover">
+            <?php if ($s['cover_path']): ?>
+              <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover"/>
+            <?php else: ?>
+              <div class="cover-placeholder">🎵</div>
+            <?php endif; ?>
+          </div>
+          <div class="song-info">
+            <p class="song-title"><?= htmlspecialchars($s['title']) ?></p>
+            <p class="song-artist"><?= htmlspecialchars($s['artist']) ?></p>
+          </div>
+        </a>
+      <?php endforeach; ?>
+    </div>
+  </section>
+
+<?php endif; ?>
+
+<script>
+// ── Onboarding modal logic ────────────────────────────────────
+const overlay   = document.getElementById('onboarding-overlay');
+const saveBtn   = document.getElementById('save-genres-btn');
+const skipBtn   = document.getElementById('skip-onboarding-btn');
+const chips     = document.querySelectorAll('.genre-chip');
+let selected    = [];
+
+if (chips.length) {
+  chips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      const genre = chip.dataset.genre;
+      if (chip.classList.contains('selected')) {
+        chip.classList.remove('selected');
+        selected = selected.filter(g => g !== genre);
+      } else if (selected.length < 3) {
+        chip.classList.add('selected');
+        selected.push(genre);
+      }
+      saveBtn.disabled = selected.length === 0;
+    });
+  });
+}
+
+if (saveBtn) {
+  saveBtn.addEventListener('click', async () => {
+    const formData = new FormData();
+    selected.forEach(g => formData.append('genres[]', g));
+
+    const res  = await fetch('/groovekut/api/onboarding_save.php', {
+      method: 'POST', body: formData
+    });
+    const data = await res.json();
+    if (data.success) {
+      overlay.classList.add('fade-out');
+      setTimeout(() => overlay.remove(), 400);
+    }
+  });
+}
+
+if (skipBtn) {
+  skipBtn.addEventListener('click', async () => {
+    // Still mark as done so it never shows again, just no genres saved
+    const formData = new FormData();
+    await fetch('/groovekut/api/onboarding_save.php', {
+      method: 'POST', body: formData
+    });
+    overlay.classList.add('fade-out');
+    setTimeout(() => overlay.remove(), 400);
+  });
+}
+</script>
+
+<?php require_once 'includes/footer.php'; ?>
