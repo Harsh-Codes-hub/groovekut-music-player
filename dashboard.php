@@ -24,41 +24,59 @@ else                 $greeting = 'Good evening';
 
 // ── Mood playlist rows (5 moods always exist) ────────────────
 $moods = [
-    'happy' => '😄',
-    'chill' => '😌',
-    'focus' => '🎯',
-    'sad'   => '🌧️',
-    'hype'  => '🔥',
+  'happy' => '😄',
+  'chill' => '😌',
+  'focus' => '🎯',
+  'sad'   => '🌧️',
+  'hype'  => '🔥',
 ];
 
 // ── Genre browse cards (from songs table, distinct genres) ───
 $genre_rows = $conn->query("SELECT DISTINCT genre FROM songs ORDER BY genre");
 $genres_all = [];
 while ($g = $genre_rows->fetch_assoc()) {
-    $genres_all[] = $g['genre'];
+  $genres_all[] = $g['genre'];
 }
 
 // ── Recently played (last 6) ─────────────────────────────────
 $recent_songs = [];
 if ($history_count > 0) {
-    $res = $conn->query(
-        "SELECT s.id, s.title, s.artist, s.cover_path, s.mood_tag
+  $res = $conn->query(
+    "SELECT s.id, s.title, s.artist, s.cover_path, s.mood_tag
          FROM play_history ph
          JOIN songs s ON s.id = ph.song_id
          WHERE ph.user_id = $user_id
          ORDER BY ph.played_at DESC
          LIMIT 6"
-    );
-    while ($row = $res->fetch_assoc()) {
-        $recent_songs[] = $row;
-    }
+  );
+  while ($row = $res->fetch_assoc()) {
+    $recent_songs[] = $row;
+  }
 }
 
 // ── New user: pull 12 random songs to fill the library row ───
 $starter_songs = [];
-$res = $conn->query("SELECT id, title, artist, cover_path, mood_tag FROM songs ORDER BY RAND() LIMIT 12");
+// Starter songs — genre preference first, seeded random as fallback
+$preferred = $_SESSION['preferred_genres'] ?? null;
+
+if (!$preferred) {
+  // Pull from DB if not in session
+  $res = $conn->query("SELECT preferred_genres FROM users WHERE id = $user_id LIMIT 1");
+  $row = $res->fetch_assoc();
+  $preferred = $row['preferred_genres'] ?? null;
+}
+
+$genres_decoded = $preferred ? json_decode($preferred, true) : [];
+
+if (!empty($genres_decoded)) {
+  $genre_list = implode("','", array_map([$conn, 'real_escape_string'], $genres_decoded));
+  $res = $conn->query("SELECT id, title, artist, cover_path, mood_tag FROM songs WHERE genre IN ('$genre_list') ORDER BY RAND($user_id) LIMIT 14");
+} else {
+  $res = $conn->query("SELECT id, title, artist, cover_path, mood_tag FROM songs ORDER BY RAND($user_id) LIMIT 12");
+}
+
 while ($row = $res->fetch_assoc()) {
-    $starter_songs[] = $row;
+  $starter_songs[] = $row;
 }
 
 $page_title = 'Home';
@@ -69,43 +87,43 @@ require_once 'includes/header.php';
      ONBOARDING MODAL — shows only on first login
 ═══════════════════════════════════════════════════════════════ -->
 <?php if (needs_onboarding()): ?>
-<div class="modal-overlay" id="onboarding-overlay">
-  <div class="modal-card onboarding-card">
+  <div class="modal-overlay" id="onboarding-overlay">
+    <div class="modal-card onboarding-card">
 
-    <div class="onboarding-header">
-      <h2>What do you want to hear? 🎵</h2>
-      <p>Pick up to 3 genres and we'll set up your playlists instantly.</p>
+      <div class="onboarding-header">
+        <h2>What do you want to hear? 🎵</h2>
+        <p>Pick up to 3 genres and we'll set up your playlists instantly.</p>
+      </div>
+
+      <div class="genre-grid" id="genre-grid">
+        <?php
+        $genre_icons = [
+          'Pop'        => '🎤',
+          'Hip-Hop'    => '🎧',
+          'Lo-fi'      => '☕',
+          'Electronic' => '⚡',
+          'Indie'      => '🎸',
+          'R&B'        => '🎷',
+          'Rock'       => '🤘',
+          'Classical'  => '🎻',
+          'Punjabi'    => '🥁',
+          'Bollywood'  => '🎬',
+        ];
+        foreach ($genre_icons as $g => $icon): ?>
+          <div class="genre-chip" data-genre="<?= $g ?>">
+            <span class="genre-icon"><?= $icon ?></span>
+            <span class="genre-label"><?= $g ?></span>
+          </div>
+        <?php endforeach; ?>
+      </div>
+
+      <div class="onboarding-actions">
+        <button class="btn-primary" id="save-genres-btn" disabled>Start Listening →</button>
+        <button class="btn-ghost" id="skip-onboarding-btn">Skip for now</button>
+      </div>
+
     </div>
-
-    <div class="genre-grid" id="genre-grid">
-      <?php
-      $genre_icons = [
-        'Pop'        => '🎤',
-        'Hip-Hop'    => '🎧',
-        'Lo-fi'      => '☕',
-        'Electronic' => '⚡',
-        'Indie'      => '🎸',
-        'R&B'        => '🎷',
-        'Rock'       => '🤘',
-        'Classical'  => '🎻',
-        'Punjabi'    => '🥁',
-        'Bollywood'  => '🎬',
-      ];
-      foreach ($genre_icons as $g => $icon): ?>
-        <div class="genre-chip" data-genre="<?= $g ?>">
-          <span class="genre-icon"><?= $icon ?></span>
-          <span class="genre-label"><?= $g ?></span>
-        </div>
-      <?php endforeach; ?>
-    </div>
-
-    <div class="onboarding-actions">
-      <button class="btn-primary" id="save-genres-btn" disabled>Start Listening →</button>
-      <button class="btn-ghost" id="skip-onboarding-btn">Skip for now</button>
-    </div>
-
   </div>
-</div>
 <?php endif; ?>
 
 <!-- ══════════════════════════════════════════════════════════
@@ -140,26 +158,26 @@ require_once 'includes/header.php';
 
   <!-- Recently played -->
   <?php if (!empty($recent_songs)): ?>
-  <section class="dash-section">
-    <h2 class="section-title">Recently Played</h2>
-    <div class="song-row">
-      <?php foreach ($recent_songs as $s): ?>
-        <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="song-card">
-          <div class="song-cover">
-            <?php if ($s['cover_path']): ?>
-              <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover"/>
-            <?php else: ?>
-              <div class="cover-placeholder">🎵</div>
-            <?php endif; ?>
-          </div>
-          <div class="song-info">
-            <p class="song-title"><?= htmlspecialchars($s['title']) ?></p>
-            <p class="song-artist"><?= htmlspecialchars($s['artist']) ?></p>
-          </div>
-        </a>
-      <?php endforeach; ?>
-    </div>
-  </section>
+    <section class="dash-section">
+      <h2 class="section-title">Recently Played</h2>
+      <div class="song-row">
+        <?php foreach ($recent_songs as $s): ?>
+          <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="song-card">
+            <div class="song-cover">
+              <?php if ($s['cover_path']): ?>
+                <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover" />
+              <?php else: ?>
+                <div class="cover-placeholder">🎵</div>
+              <?php endif; ?>
+            </div>
+            <div class="song-info">
+              <p class="song-title"><?= htmlspecialchars($s['title']) ?></p>
+              <p class="song-artist"><?= htmlspecialchars($s['artist']) ?></p>
+            </div>
+          </a>
+        <?php endforeach; ?>
+      </div>
+    </section>
   <?php endif; ?>
 
   <!-- Recommendations link -->
@@ -201,7 +219,7 @@ require_once 'includes/header.php';
         <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="song-card">
           <div class="song-cover">
             <?php if ($s['cover_path']): ?>
-              <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover"/>
+              <img src="/groovekut/<?= htmlspecialchars($s['cover_path']) ?>" alt="cover" />
             <?php else: ?>
               <div class="cover-placeholder">🎵</div>
             <?php endif; ?>
@@ -218,56 +236,58 @@ require_once 'includes/header.php';
 <?php endif; ?>
 
 <script>
-// ── Onboarding modal logic ────────────────────────────────────
-const overlay   = document.getElementById('onboarding-overlay');
-const saveBtn   = document.getElementById('save-genres-btn');
-const skipBtn   = document.getElementById('skip-onboarding-btn');
-const chips     = document.querySelectorAll('.genre-chip');
-let selected    = [];
+  // ── Onboarding modal logic ────────────────────────────────────
+  const overlay = document.getElementById('onboarding-overlay');
+  const saveBtn = document.getElementById('save-genres-btn');
+  const skipBtn = document.getElementById('skip-onboarding-btn');
+  const chips = document.querySelectorAll('.genre-chip');
+  let selected = [];
 
-if (chips.length) {
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      const genre = chip.dataset.genre;
-      if (chip.classList.contains('selected')) {
-        chip.classList.remove('selected');
-        selected = selected.filter(g => g !== genre);
-      } else if (selected.length < 3) {
-        chip.classList.add('selected');
-        selected.push(genre);
+  if (chips.length) {
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const genre = chip.dataset.genre;
+        if (chip.classList.contains('selected')) {
+          chip.classList.remove('selected');
+          selected = selected.filter(g => g !== genre);
+        } else if (selected.length < 3) {
+          chip.classList.add('selected');
+          selected.push(genre);
+        }
+        saveBtn.disabled = selected.length === 0;
+      });
+    });
+  }
+
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const formData = new FormData();
+      selected.forEach(g => formData.append('genres[]', g));
+
+      const res = await fetch('/groovekut/api/onboarding_save.php', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.remove(), 400);
       }
-      saveBtn.disabled = selected.length === 0;
     });
-  });
-}
+  }
 
-if (saveBtn) {
-  saveBtn.addEventListener('click', async () => {
-    const formData = new FormData();
-    selected.forEach(g => formData.append('genres[]', g));
-
-    const res  = await fetch('/groovekut/api/onboarding_save.php', {
-      method: 'POST', body: formData
-    });
-    const data = await res.json();
-    if (data.success) {
+  if (skipBtn) {
+    skipBtn.addEventListener('click', async () => {
+      // Still mark as done so it never shows again, just no genres saved
+      const formData = new FormData();
+      await fetch('/groovekut/api/onboarding_save.php', {
+        method: 'POST',
+        body: formData
+      });
       overlay.classList.add('fade-out');
       setTimeout(() => overlay.remove(), 400);
-    }
-  });
-}
-
-if (skipBtn) {
-  skipBtn.addEventListener('click', async () => {
-    // Still mark as done so it never shows again, just no genres saved
-    const formData = new FormData();
-    await fetch('/groovekut/api/onboarding_save.php', {
-      method: 'POST', body: formData
     });
-    overlay.classList.add('fade-out');
-    setTimeout(() => overlay.remove(), 400);
-  });
-}
+  }
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

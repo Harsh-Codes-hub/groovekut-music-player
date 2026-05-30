@@ -23,8 +23,8 @@
   --radius-sm:    6px;
   --radius-lg:    16px;
   --transition:   0.2s ease;
-  --font-display: 'Syne', sans-serif;
-  --font-body:    'DM Sans', sans-serif;
+  --font-display: 'Playfair Display', serif;
+  --font-body:    'Inter', sans-serif;
 }
 
 /* ── Reset ─────────────────────────────────────────────────── */
@@ -56,6 +56,11 @@ img { display: block; max-width: 100%; }
 /* ── Logo ──────────────────────────────────────────────────── */
 .logo-groove { font-family: var(--font-display); font-weight: 800; color: var(--text); }
 .logo-kut    { font-family: var(--font-display); font-weight: 800; color: var(--accent); }
+
+/* ── Remix Icons global sizing ─────────────────────────────── */
+.ri-home-5-line, .ri-music-library-line,
+.ri-search-line, .ri-user-line,
+.ri-logout-box-r-line { font-size: 15px; vertical-align: -2px; margin-right: 2px; }
 
 /* ── Navbar ────────────────────────────────────────────────── */
 .navbar {
@@ -289,10 +294,11 @@ img { display: block; max-width: 100%; }
 
 .section-title {
   font-family: var(--font-display);
-  font-size: 18px;
+  font-size: 20px;
   font-weight: 700;
   margin-bottom: 18px;
   color: var(--text);
+  letter-spacing: -0.3px;
 }
 
 /* ── Mood row ──────────────────────────────────────────────── */
