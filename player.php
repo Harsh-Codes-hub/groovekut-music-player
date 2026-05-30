@@ -176,6 +176,12 @@ require_once 'includes/header.php';
         <span class="ctrl-label" id="autoplay-label">Autoplay</span>
       </button>
 
+      <!-- Smart Queue -->
+      <button class="ctrl-sm-btn ctrl-toggle active" id="smart-queue-btn" title="Smart Queue On">
+        <i class="ri-sparkling-line"></i>
+        <span class="ctrl-label" id="smart-queue-label">Smart</span>
+      </button>
+
     </div>
 
   </div>

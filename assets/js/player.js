@@ -9,12 +9,13 @@ const state = {
   queueIndex:   0,
   shuffle:      false,
   shuffleOrder: [],
-  loop:         'off',      // 'off' | 'all' | 'one'
+  loop:         'off',
   autoplay:     true,
+  smartQueue:   true,       // true = genre+mood filtered | false = all songs random
   muted:        false,
   volume:       80,
   playing:      false,
-  loggedPlay:   false,      // has this play been logged to DB?
+  loggedPlay:   false,
 };
 
 // ── DOM refs ─────────────────────────────────────────────────
@@ -27,6 +28,8 @@ const shuffleBtn    = document.getElementById('shuffle-btn');
 const loopBtn       = document.getElementById('loop-btn');
 const autoplayBtn   = document.getElementById('autoplay-btn');
 const autoplayLabel = document.getElementById('autoplay-label');
+const smartQueueBtn = document.getElementById('smart-queue-btn');
+const smartQueueLabel = document.getElementById('smart-queue-label');
 const muteBtn       = document.getElementById('mute-btn');
 const volumeIcon    = document.getElementById('volume-icon');
 const volumeSlider  = document.getElementById('volume-slider');
@@ -148,13 +151,15 @@ if (coverImg) {
 async function buildQueue() {
   queueList.innerHTML = '<p class="queue-loading">Building queue...</p>';
   try {
-    const url = `/groovekut/api/get_queue.php?song_id=${INITIAL_SONG.id}&context=${QUEUE_CONTEXT}&value=${encodeURIComponent(QUEUE_VALUE)}`;
+    const smart = state.smartQueue ? 1 : 0;
+    const currentSong = state.queue[state.queueIndex] || INITIAL_SONG;
+    const url = `/groovekut/api/get_queue.php?song_id=${currentSong.id}&context=${QUEUE_CONTEXT}&value=${encodeURIComponent(QUEUE_VALUE)}&smart=${smart}`;
     const res  = await fetch(url);
     const data = await res.json();
 
     if (data.success && data.queue.length) {
-      state.queue      = data.queue;
-      state.queueIndex = 0;
+      state.queue        = data.queue;
+      state.queueIndex   = 0;
       state.shuffleOrder = generateShuffleOrder(data.queue.length);
       renderQueue();
       saveQueueToSession();
@@ -441,6 +446,19 @@ autoplayBtn.addEventListener('click', () => {
   autoplayBtn.classList.toggle('active', state.autoplay);
   autoplayLabel.textContent = state.autoplay ? 'Autoplay' : 'Autoplay Off';
   autoplayBtn.title = state.autoplay ? 'Autoplay On' : 'Autoplay Off';
+});
+
+// ── Smart Queue ───────────────────────────────────────────────
+smartQueueBtn.addEventListener('click', () => {
+  state.smartQueue = !state.smartQueue;
+  smartQueueBtn.classList.toggle('active', state.smartQueue);
+  smartQueueBtn.querySelector('i').className = state.smartQueue
+    ? 'ri-sparkling-line'
+    : 'ri-music-line';
+  smartQueueLabel.textContent = state.smartQueue ? 'Smart' : 'All Songs';
+  smartQueueBtn.title = state.smartQueue ? 'Smart Queue On' : 'Smart Queue Off';
+  // Rebuild queue immediately with new mode, keep current song playing
+  buildQueue();
 });
 
 // ── Play / Pause button ───────────────────────────────────────

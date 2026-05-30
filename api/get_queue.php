@@ -11,9 +11,21 @@ header('Content-Type: application/json');
 $song_id = intval($_GET['song_id'] ?? 0);
 $context = $_GET['context'] ?? 'random'; // 'genre', 'mood', 'random'
 $value   = $_GET['value']   ?? '';       // genre name or mood name if context set
+$smart   = intval($_GET['smart'] ?? 1);  // 1 = smart genre/mood queue | 0 = all songs random
 
 if (!$song_id) {
     echo json_encode(['success' => false, 'error' => 'Invalid song_id']);
+    exit;
+}
+
+// ── Smart Queue OFF — all songs, pure random ──────────────────
+if ($smart === 0) {
+    $queue     = [];
+    $first_res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre FROM songs WHERE id = $song_id LIMIT 1");
+    if ($first_res) $queue[] = $first_res->fetch_assoc();
+    $res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre FROM songs WHERE id != $song_id ORDER BY RAND() LIMIT 101");
+    while ($row = $res->fetch_assoc()) $queue[] = $row;
+    echo json_encode(['success' => true, 'queue' => $queue]);
     exit;
 }
 
