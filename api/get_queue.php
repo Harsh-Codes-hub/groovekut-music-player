@@ -21,9 +21,9 @@ if (!$song_id) {
 // ── Smart Queue OFF — all songs, pure random ──────────────────
 if ($smart === 0) {
     $queue     = [];
-    $first_res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre FROM songs WHERE id = $song_id LIMIT 1");
+    $first_res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit FROM songs WHERE id = $song_id LIMIT 1");
     if ($first_res) $queue[] = $first_res->fetch_assoc();
-    $res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre FROM songs WHERE id != $song_id ORDER BY RAND() LIMIT 101");
+    $res = $conn->query("SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit FROM songs WHERE id != $song_id ORDER BY RAND() LIMIT 101");
     while ($row = $res->fetch_assoc()) $queue[] = $row;
     echo json_encode(['success' => true, 'queue' => $queue]);
     exit;
@@ -56,7 +56,7 @@ $mood      = $song_data['mood_tag'];
 if ($context === 'mood' && $value) {
     $m = $conn->real_escape_string($value);
     $res = $conn->query(
-        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre
+        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit
          FROM songs WHERE mood_tag = '$m'
          ORDER BY RAND() LIMIT 50"
     );
@@ -66,7 +66,7 @@ if ($context === 'mood' && $value) {
     $all_genres = array_merge([$value], $rel);
     $genre_list = implode("','", array_map([$conn, 'real_escape_string'], $all_genres));
     $res = $conn->query(
-        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre
+        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit
          FROM songs WHERE genre IN ('$genre_list')
          ORDER BY RAND() LIMIT 50"
     );
@@ -76,7 +76,7 @@ if ($context === 'mood' && $value) {
     $all_genres = array_merge([$genre], $rel);
     $genre_list = implode("','", array_map([$conn, 'real_escape_string'], $all_genres));
     $res = $conn->query(
-        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre
+        "SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit
          FROM songs WHERE genre IN ('$genre_list')
          ORDER BY RAND() LIMIT 50"
     );
@@ -85,7 +85,7 @@ if ($context === 'mood' && $value) {
 $queue = [];
 // Put clicked song first
 $first_res = $conn->query(
-    "SELECT id, title, artist, cover_path, file_path, mood_tag, genre
+    "SELECT id, title, artist, cover_path, file_path, mood_tag, genre, is_explicit
      FROM songs WHERE id = $song_id LIMIT 1"
 );
 if ($first_res) {

@@ -256,6 +256,22 @@ function loadSong(song) {
     : "";
   moodEl.className = `tag-mood mood-${song.mood_tag}`;
 
+  // Update explicit tag
+  const tagsWrap = document.querySelector(".player-tags");
+  const existingE = tagsWrap ? tagsWrap.querySelector(".tag-explicit") : null;
+  if (tagsWrap) {
+    if (song.is_explicit == 1 || song.is_explicit === true) {
+      if (!existingE) {
+        const eTag = document.createElement("span");
+        eTag.className = "tag-explicit";
+        eTag.textContent = "E";
+        tagsWrap.appendChild(eTag);
+      }
+    } else {
+      if (existingE) existingE.remove();
+    }
+  }
+
   // Update cover
   const coverEl = document.querySelector(".player-cover");
   if (coverEl && song.cover_path) {
@@ -371,9 +387,13 @@ audio.addEventListener("ended", () => {
   if (state.loop === "one") {
     audio.currentTime = 0;
     playAudio();
-  } else if (state.loop === "all" || state.autoplay) {
+  } else if (state.loop === "all") {
+    playNext();
+  } else if (state.autoplay) {
+    // loop is off — only advance if autoplay is on
     playNext();
   } else {
+    // loop off + autoplay off — stop completely
     state.playing = false;
     playIcon.className = "ri-play-fill";
   }
@@ -640,8 +660,10 @@ function escHtml(str) {
 // ── Resize visualizer canvas ──────────────────────────────────
 window.addEventListener("resize", () => {
   if (visualCanvas) {
-    visualCanvas.width = window.innerWidth;
+    visualCanvas.width  = window.innerWidth;
     visualCanvas.height = window.innerHeight;
+    if (visualRaf) cancelAnimationFrame(visualRaf);
+    if (analyser) drawVisualizer();
   }
 });
 

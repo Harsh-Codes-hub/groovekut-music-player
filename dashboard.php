@@ -106,7 +106,6 @@ require_once 'includes/header.php';
         $genre_icons = [
           'Pop'        => '🎤',
           'Hip-Hop'    => '🎧',
-          'Lo-fi'      => '☕',
           'Electronic' => '⚡',
           'Indie'      => '🎸',
           'R&B'        => '🎷',
@@ -177,10 +176,14 @@ require_once 'includes/header.php';
     <h2 class="section-title">Browse by Mood</h2>
     <div class="mood-row">
       <?php foreach ($moods as $m => $emoji): ?>
-        <a href="/groovekut/library.php?mood=<?= $m ?>" class="mood-card mood-<?= $m ?>">
+        <div class="mood-card mood-<?= $m ?> <?= $m === $mood ? 'active-mood' : '' ?>"
+             data-mood="<?= $m ?>"
+             role="button"
+             tabindex="0"
+             title="Set mood to <?= ucfirst($m) ?>">
           <span class="mood-emoji"><?= $emoji ?></span>
           <span class="mood-name"><?= ucfirst($m) ?></span>
-        </a>
+        </div>
       <?php endforeach; ?>
     </div>
   </section>
@@ -313,8 +316,45 @@ if (skipBtn) {
 }
 
 // ════════════════════════════════════════════════════════════
-// Mood badge picker
+// Mood cards — big squares set mood AND update badge
 // ════════════════════════════════════════════════════════════
+const moodCards = document.querySelectorAll('.mood-card[data-mood]');
+
+moodCards.forEach(card => {
+  card.addEventListener('click', async () => {
+    const mood = card.dataset.mood;
+
+    // Update all mood cards active state
+    moodCards.forEach(c => c.classList.remove('active-mood'));
+    card.classList.add('active-mood');
+
+    // Mirror to dropdown chips
+    pickerChips.forEach(c => {
+      c.classList.toggle('active', c.dataset.mood === mood);
+    });
+
+    // Update badge
+    if (moodBadge && badgeLabel) {
+      moodBadge.className = `mood-badge mood-${mood}`;
+      moodBadge.id = 'mood-badge';
+      badgeLabel.textContent = `${moodNames[mood]} vibes`;
+    }
+
+    closePicker();
+
+    // POST to API
+    const fd = new FormData();
+    fd.append('mood', mood);
+    await fetch('/groovekut/api/mood.php', { method: 'POST', body: fd });
+  });
+
+  // Keyboard support
+  card.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') card.click();
+  });
+});
+
+
 const moodBadge   = document.getElementById('mood-badge');
 const moodPicker  = document.getElementById('mood-picker');
 const badgeLabel  = document.getElementById('mood-badge-label');

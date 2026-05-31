@@ -56,11 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     setcookie(
                         'remember_token',
                         $token,
-                        time() + (30 * 24 * 60 * 60),  // 30 days
-                        '/',
-                        '',
-                        false,  // set true if HTTPS
-                        true    // httpOnly
+                        [
+                            'expires'  => time() + (30 * 24 * 60 * 60),
+                            'path'     => '/',
+                            'httponly' => true,
+                            'samesite' => 'Lax',
+                        ]
                     );
                 }
 

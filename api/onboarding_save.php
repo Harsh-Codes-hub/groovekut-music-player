@@ -18,7 +18,7 @@ $user_id = current_user_id();
 $genres  = $_POST['genres'] ?? [];   // array of genre strings
 
 // Sanitize — only allow known genres
-$allowed = ['Pop','Hip-Hop','Lo-fi','Electronic','Indie','R&B','Rock','Classical','Punjabi','Bollywood'];
+$allowed = ['Pop','Hip-Hop','Electronic','Indie','R&B','Rock','Classical','Punjabi','Bollywood'];
 $genres  = array_values(array_intersect($genres, $allowed));
 
 // Store as JSON, mark onboarding done
