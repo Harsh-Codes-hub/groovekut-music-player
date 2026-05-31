@@ -54,7 +54,7 @@ Songs and covers follow a strict slug format:
   index.php                     ✅ Entry point — session check + redirect
   dashboard.php                 ✅ Home — two states (new user / returning)
   player.php                    ✅ Full page player — YouTube Music style
-  recommendations.php              Phase 4
+  recommendations.php           ✅ Personalised rec page with mood switcher
   search.php                       Phase 5
   library.php                      Phase 5
   profile.php                      Phase 5
@@ -71,8 +71,8 @@ Songs and covers follow a strict slug format:
     like.php                    ✅ Heart toggle — inserts/deletes liked_songs
     session_check.php           ✅ Guest gate — 1 free play then login wall
     get_queue.php               ✅ Builds queue — smart (genre+mood) or all songs
-    mood.php                       Phase 4
-    rec_engine.php                 Phase 4
+    mood.php                    ✅ Mood API — GET current, POST to set + log
+    rec_engine.php              ✅ Scoring engine — play×1, liked×3, mood×2, genre×1.5
 
   uploads/
     songs/                      ← drop .mp3 files here
@@ -113,7 +113,17 @@ Songs and covers follow a strict slug format:
 - Browse by genre cards
 - Mood badge in hero
 
-### Player
+### Recommendations + Mood
+- Weighted scoring engine — play_count ×1, liked ×3, mood match ×2, genre match ×1.5
+- Recommendations page with top 20 scored songs, rank badges, signal indicators
+- Score bar visualisation per card (liked ♥, mood ◉, genre ▣ signals shown)
+- Skeleton loading state while fetching
+- Mood switcher inline on rec page — switch mood, recs refresh instantly
+- Mood badge on dashboard hero — click to open dropdown picker
+- Mood logged to mood_log table + updates users.preferred_mood + session
+- Empty state for new users with no play history
+
+
 - Full page YouTube Music style
 - Cover art → Canvas color extraction → per-song radial gradient background
 - Web Audio API visualizer — frequency bars behind UI
@@ -166,7 +176,7 @@ Songs and covers follow a strict slug format:
 - [x] Phase 1 — DB schema + folder structure + db_connect + index.php
 - [x] Phase 2 — Auth system + onboarding + dashboard + CSS design system
 - [x] Phase 3 — Full player + queue engine + play logging + like system
-- [ ] Phase 4 — Recommendation engine + mood picker
+- [x] Phase 4 — Recommendation engine + mood picker
 - [ ] Phase 5 — Library + profile + search + admin panel
 - [ ] Phase 6 — UI polish pass
 

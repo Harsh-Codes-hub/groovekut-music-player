@@ -1,7 +1,7 @@
 /* ============================================================
    GrooveKut — Global Stylesheet
    Theme: Dark greyscale + #378ADD blue accent
-   Font: Syne (display) + DM Sans (body)
+   Font: Space Grotesk (display) + Inter (body)
    ============================================================ */
 
 /* ── Variables ─────────────────────────────────────────────── */
@@ -91,7 +91,7 @@ img {
 
 /* ── Remix Icons global sizing ─────────────────────────────── */
 .ri-home-5-line,
-.ri-music-library-line,
+.ri-bar-chart-box-fill,
 .ri-search-line,
 .ri-user-line,
 .ri-logout-box-r-line {
