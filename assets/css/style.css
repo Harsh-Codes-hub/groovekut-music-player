@@ -1015,6 +1015,7 @@ img {
 }
 
 .volume-slider {
+  appearance: none;
   -webkit-appearance: none;
   width: 100px;
   height: 4px;
