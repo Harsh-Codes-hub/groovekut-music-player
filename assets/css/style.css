@@ -4,6 +4,23 @@
    Font: Sora (display) + Inter (body)
    ============================================================ */
 
+/* ── Local Fonts ───────────────────────────────────────────── */
+@font-face {
+  font-family: "Sora";
+  src: url("/groovekut/assets/fonts/Sora-VariableFont_wght.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Inter";
+  src: url("/groovekut/assets/fonts/Inter-VariableFont_opsz,wght.woff") format("woff");
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
 /* ── Variables ─────────────────────────────────────────────── */
 :root {
   --bg: #0d0d0d;

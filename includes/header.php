@@ -11,10 +11,11 @@ $page_title = $page_title ?? 'GrooveKut';
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title><?= htmlspecialchars($page_title) ?> — GrooveKut</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/remixicon@4.3.0/fonts/remixicon.css" rel="stylesheet">
+  <link rel="apple-touch-icon" sizes="180x180" href="/groovekut/assets/favicon/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/groovekut/assets/favicon/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/groovekut/assets/favicon/favicon-16x16.png">
+<link rel="manifest" href="/groovekut/assets/favicon/site.webmanifest">
+  <link rel="stylesheet" href="/groovekut/assets/fonts/remixicon.css" />
   <link rel="stylesheet" href="/groovekut/assets/css/style.css" />
 </head>
 
