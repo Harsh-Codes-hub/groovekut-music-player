@@ -171,7 +171,7 @@ require_once 'includes/header.php';
       </div>
 
       <!-- Autoplay -->
-      <button class="ctrl-sm-btn ctrl-toggle" id="autoplay-btn" title="Autoplay On">
+      <button class="ctrl-sm-btn ctrl-toggle active" id="autoplay-btn" title="Autoplay On">
         <i class="ri-play-list-2-line"></i>
         <span class="ctrl-label" id="autoplay-label">Autoplay</span>
       </button>

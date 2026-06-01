@@ -10,7 +10,7 @@ const state = {
   shuffle: false,
   shuffleOrder: [],
   loop: "off",
-  autoplay: false,
+  autoplay: true,
   smartQueue: true, // true = genre+mood filtered | false = all songs random
   muted: false,
   volume: 80,
