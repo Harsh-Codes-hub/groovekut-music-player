@@ -49,6 +49,24 @@ $mood_gradients = [
 ];
 $mood_rgb = $mood_gradients[$song['mood_tag']] ?? '55, 138, 221';
 
+// Determine if this is a locked playlist context.
+// Locked contexts: 'liked', 'top', 'genre'
+// These contexts play only songs from that specific playlist.
+// The smart queue toggle is hidden and replaced with a playlist badge.
+$locked_contexts = ['liked', 'top', 'genre-playlist'];
+$is_locked       = in_array($context, $locked_contexts);
+
+// For genre-playlist, the genre name comes via ?label= param (value holds song IDs)
+$genre_label = htmlspecialchars($_GET['label'] ?? '');
+
+// Human-readable label for the locked playlist badge
+$locked_labels = [
+    'liked'          => '❤️ Liked Songs',
+    'top'            => '🔥 Most Played',
+    'genre-playlist' => '🎵 ' . ($genre_label ?: 'Genre') . ' Playlist',
+];
+$locked_label = $is_locked ? ($locked_labels[$context] ?? 'Playlist') : '';
+
 $duration_fmt = '';
 if ($song['duration']) {
     $m = floor($song['duration'] / 60);
@@ -176,11 +194,20 @@ require_once 'includes/header.php';
         <span class="ctrl-label" id="autoplay-label">Autoplay</span>
       </button>
 
-      <!-- Smart Queue -->
-      <button class="ctrl-sm-btn ctrl-toggle active" id="smart-queue-btn" title="Smart Queue On">
-        <i class="ri-sparkling-line"></i>
-        <span class="ctrl-label" id="smart-queue-label">Smart</span>
-      </button>
+      <?php if ($is_locked): ?>
+        <!-- Locked playlist badge — replaces smart queue button -->
+        <!-- JS also reads LOCKED_CONTEXT so it never calls buildQueue with smart toggle -->
+        <div class="ctrl-sm-btn playlist-lock-badge" id="smart-queue-btn" title="Playing from: <?= $locked_label ?>">
+          <i class="ri-lock-line"></i>
+          <span class="ctrl-label" id="smart-queue-label"><?= $locked_label ?></span>
+        </div>
+      <?php else: ?>
+        <!-- Smart Queue — only shown for non-locked contexts (home, search, dashboard) -->
+        <button class="ctrl-sm-btn ctrl-toggle active" id="smart-queue-btn" title="Smart Queue On">
+          <i class="ri-sparkling-line"></i>
+          <span class="ctrl-label" id="smart-queue-label">Smart</span>
+        </button>
+      <?php endif; ?>
 
     </div>
 
@@ -188,7 +215,12 @@ require_once 'includes/header.php';
 
   <!-- ── Right: Queue ───────────────────────────────────── -->
   <div class="player-right">
-    <h3 class="queue-title"><i class="ri-list-check"></i> Up Next</h3>
+    <h3 class="queue-title">
+      <i class="ri-list-check"></i> Up Next
+      <?php if ($is_locked): ?>
+        <span class="queue-context-tag"><?= $locked_label ?></span>
+      <?php endif; ?>
+    </h3>
     <div class="queue-list" id="queue-list">
       <p class="queue-loading">Building queue...</p>
     </div>
@@ -214,9 +246,13 @@ require_once 'includes/header.php';
     duration:  <?= intval($song['duration'] ?? 0) ?>,
     liked:     <?= $is_liked ? 'true' : 'false' ?>
   };
-  const QUEUE_CONTEXT = <?= json_encode($context) ?>;
-  const QUEUE_VALUE   = <?= json_encode($value) ?>;
-  const IS_LOGGED_IN  = <?= is_logged_in() ? 'true' : 'false' ?>;
+  const QUEUE_CONTEXT  = <?= json_encode($context) ?>;
+  const QUEUE_VALUE    = <?= json_encode($value) ?>;
+  const QUEUE_LABEL    = <?= json_encode($genre_label) ?>;
+  const IS_LOGGED_IN   = <?= is_logged_in() ? 'true' : 'false' ?>;
+  // LOCKED_CONTEXT: true when coming from a library playlist.
+  // player.js uses this to disable smart queue toggle + skip rebuild.
+  const LOCKED_CONTEXT = <?= $is_locked ? 'true' : 'false' ?>;
 </script>
 <script src="/groovekut/assets/js/player.js"></script>
 

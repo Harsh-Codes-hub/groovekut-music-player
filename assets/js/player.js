@@ -11,7 +11,10 @@ const state = {
   shuffleOrder: [],
   loop: "off",
   autoplay: true,
-  smartQueue: true, // true = genre+mood filtered | false = all songs random
+  // smartQueue is only meaningful when LOCKED_CONTEXT is false.
+  // When LOCKED_CONTEXT is true, this value is ignored — the queue
+  // is always the exact playlist from library.php and never rebuilt.
+  smartQueue: true,
   muted: false,
   volume: 80,
   playing: false,
@@ -80,7 +83,6 @@ function drawVisualizer() {
 
     for (let i = 0; i < data.length; i++) {
       const barH = (data[i] / 255) * (H * 0.35);
-      // Draw from bottom center outward
       ctx.fillStyle = `rgba(${currentRGB}, ${0.15 + (data[i] / 255) * 0.2})`;
       ctx.beginPath();
       ctx.roundRect(x, H - barH, barW - gap, barH, 3);
@@ -115,7 +117,6 @@ function extractColor(imgEl) {
     r = Math.round(r / count);
     g = Math.round(g / count);
     b = Math.round(b / count);
-    // Boost saturation slightly so it reads as color not grey
     currentRGB = `${r}, ${g}, ${b}`;
     applyBgColor(r, g, b);
   } catch (e) {
@@ -156,7 +157,12 @@ if (coverImg) {
 async function buildQueue() {
   queueList.innerHTML = '<p class="queue-loading">Building queue...</p>';
   try {
-    const smart = state.smartQueue ? 1 : 0;
+    // LOCKED_CONTEXT = playing from a library playlist (liked, top, genre).
+    // Always use smart=1 so get_queue.php routes to the locked handler.
+    // The smart param is intentionally ignored by those handlers anyway,
+    // but we never want to call smart=0 (all songs random) for a locked playlist.
+    const smart = LOCKED_CONTEXT ? 1 : (state.smartQueue ? 1 : 0);
+
     const currentSong = state.queue[state.queueIndex] || INITIAL_SONG;
     const url = `/groovekut/api/get_queue.php?song_id=${currentSong.id}&context=${QUEUE_CONTEXT}&value=${encodeURIComponent(QUEUE_VALUE)}&smart=${smart}`;
     const res = await fetch(url);
@@ -289,7 +295,7 @@ function loadSong(song) {
   progressFill.style.width = "0%";
   timeCurrent.textContent = "0:00";
 
-  // Reset like state (we'd need to check DB — simplified: reset to unliked)
+  // Reset like state
   if (likeBtn) {
     likeBtn.dataset.songId = song.id;
     likeBtn.classList.remove("liked");
@@ -365,6 +371,20 @@ function getPrevIndex() {
   return (state.queueIndex - 1 + state.queue.length) % state.queue.length;
 }
 
+// Used exclusively by autoplay (ended event, loop=off).
+// Returns the next index, or null if we're at the end of the queue.
+// Shuffle-aware: walks shuffleOrder linearly, returns null at its end too.
+// playNext() (prev/next buttons + loop=all) still uses getNextIndex() which wraps.
+function getNextIndexLinear() {
+  if (state.shuffle) {
+    const pos = state.shuffleOrder.indexOf(state.queueIndex);
+    if (pos >= state.shuffleOrder.length - 1) return null; // end of shuffle order
+    return state.shuffleOrder[pos + 1];
+  }
+  if (state.queueIndex >= state.queue.length - 1) return null; // end of queue
+  return state.queueIndex + 1;
+}
+
 function playNext() {
   if (!state.queue.length) return;
   state.queueIndex = getNextIndex();
@@ -385,15 +405,26 @@ function playPrev() {
 // ── Song ended ────────────────────────────────────────────────
 audio.addEventListener("ended", () => {
   if (state.loop === "one") {
+    // Repeat One — replay same song forever
     audio.currentTime = 0;
     playAudio();
   } else if (state.loop === "all") {
+    // Repeat All — advance and wrap at end (full loop)
     playNext();
   } else if (state.autoplay) {
-    // loop is off — only advance if autoplay is on
-    playNext();
+    // Autoplay — advance to next song, but STOP at the end of the queue.
+    // No wrapping — that's loop's job, not autoplay's.
+    const nextIndex = getNextIndexLinear();
+    if (nextIndex === null) {
+      // Reached the end — stop cleanly
+      state.playing = false;
+      playIcon.className = "ri-play-fill";
+    } else {
+      state.queueIndex = nextIndex;
+      loadSong(state.queue[state.queueIndex]);
+    }
   } else {
-    // loop off + autoplay off — stop completely
+    // loop off + autoplay off — stop on current song
     state.playing = false;
     playIcon.className = "ri-play-fill";
   }
@@ -527,17 +558,23 @@ autoplayBtn.addEventListener("click", () => {
 });
 
 // ── Smart Queue ───────────────────────────────────────────────
-smartQueueBtn.addEventListener("click", () => {
-  state.smartQueue = !state.smartQueue;
-  smartQueueBtn.classList.toggle("active", state.smartQueue);
-  smartQueueBtn.querySelector("i").className = state.smartQueue
-    ? "ri-sparkling-line"
-    : "ri-music-line";
-  smartQueueLabel.textContent = state.smartQueue ? "Smart" : "All Songs";
-  smartQueueBtn.title = state.smartQueue ? "Smart Queue On" : "Smart Queue Off";
-  // Rebuild queue immediately with new mode, keep current song playing
-  buildQueue();
-});
+// When LOCKED_CONTEXT is true, the smart-queue-btn is a <div> (not a <button>)
+// rendered as a playlist badge in player.php — clicking it does nothing.
+// When LOCKED_CONTEXT is false, it's a real <button> that toggles the queue mode.
+if (smartQueueBtn && !LOCKED_CONTEXT) {
+  smartQueueBtn.addEventListener("click", () => {
+    state.smartQueue = !state.smartQueue;
+    smartQueueBtn.classList.toggle("active", state.smartQueue);
+    smartQueueBtn.querySelector("i").className = state.smartQueue
+      ? "ri-sparkling-line"
+      : "ri-music-line";
+    smartQueueLabel.textContent = state.smartQueue ? "Smart" : "All Songs";
+    smartQueueBtn.title = state.smartQueue ? "Smart Queue On" : "Smart Queue Off";
+    // Rebuild queue immediately with new mode, keep current song playing
+    buildQueue();
+  });
+}
+// If LOCKED_CONTEXT is true, the badge element has no click listener — it's inert.
 
 // ── Play / Pause button ───────────────────────────────────────
 playBtn.addEventListener("click", () => {
@@ -612,7 +649,6 @@ function updateNowPlaying(song) {
 
 // ── Keyboard shortcuts ────────────────────────────────────────
 document.addEventListener("keydown", (e) => {
-  // Don't fire if typing in an input
   if (e.target.tagName === "INPUT") return;
   if (e.code === "Space") {
     e.preventDefault();
@@ -672,7 +708,6 @@ buildQueue();
 updateNowPlaying(INITIAL_SONG);
 
 // Auto-play on page load (requires user gesture — triggered by click on song card)
-// If coming from a click, audio context will init on first playAudio call
 audio.addEventListener(
   "canplay",
   () => {

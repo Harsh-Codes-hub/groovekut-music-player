@@ -2305,3 +2305,48 @@ img {
     display: none;
   }
 }
+
+.playlist-lock-badge {
+  cursor: default;          /* not clickable */
+  opacity: 0.85;
+  background: rgba(55, 138, 221, 0.12);
+  border: 1px solid rgba(55, 138, 221, 0.3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  color: var(--accent);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;     /* completely inert — no hover, no click */
+}
+ 
+.playlist-lock-badge i {
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+ 
+.playlist-lock-badge .ctrl-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+ 
+/* ── Queue context tag shown in "Up Next" header ── */
+.queue-context-tag {
+  display: inline-block;
+  margin-left: 8px;
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: var(--accent);
+  background: rgba(55, 138, 221, 0.12);
+  border: 1px solid rgba(55, 138, 221, 0.25);
+  border-radius: 20px;
+  padding: 2px 8px;
+  vertical-align: middle;
+  white-space: nowrap;
+}

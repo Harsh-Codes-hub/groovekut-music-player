@@ -73,6 +73,13 @@ $res = $conn->query(
 );
 while ($row = $res->fetch_assoc()) $top_played[] = $row;
 
+// ── Build JS-safe song ID arrays for locked playlist contexts ─
+// These are passed to player.php via URL so get_queue.php can
+// reconstruct the exact playlist without hitting DB differently.
+// We pass them as a comma-separated list in the `value` param.
+$liked_ids   = implode(',', array_column($liked_songs, 'id'));
+$top_ids     = implode(',', array_column($top_played,  'id'));
+
 $mood_emojis = ['happy'=>'😄','chill'=>'😌','focus'=>'🎯','sad'=>'🌧️','hype'=>'🔥'];
 
 $page_title = 'Library';
@@ -116,7 +123,8 @@ require_once 'includes/header.php';
     <?php else: ?>
       <div class="lib-song-list">
         <?php foreach ($liked_songs as $i => $s): ?>
-          <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="lib-row">
+          <!-- context=liked locks queue to this liked songs playlist -->
+          <a href="/groovekut/player.php?id=<?= $s['id'] ?>&context=liked&value=<?= urlencode($liked_ids) ?>" class="lib-row">
             <span class="lib-row-num"><?= $i + 1 ?></span>
             <div class="lib-row-cover">
               <?php if ($s['cover_path']): ?>
@@ -174,8 +182,14 @@ require_once 'includes/header.php';
           </div>
 
           <div class="lib-song-list">
+            <?php
+            // Build ordered ID list for this genre playlist — same pattern as liked/top
+            $genre_ids = implode(',', array_column($pl['songs'], 'id'));
+            ?>
             <?php foreach ($pl['songs'] as $i => $s): ?>
-              <a href="/groovekut/player.php?id=<?= $s['id'] ?>&context=genre&value=<?= urlencode($pl['genre']) ?>"
+              <!-- context=genre-playlist locks queue to this specific genre playlist's songs -->
+              <!-- context=genre (without -playlist) is reserved for smart genre queue from dashboard/search -->
+              <a href="/groovekut/player.php?id=<?= $s['id'] ?>&context=genre-playlist&value=<?= urlencode($genre_ids) ?>&label=<?= urlencode($pl['genre']) ?>"
                  class="lib-row">
                 <span class="lib-row-num"><?= $i + 1 ?></span>
                 <div class="lib-row-cover">
@@ -220,7 +234,8 @@ require_once 'includes/header.php';
     <?php else: ?>
       <div class="lib-song-list">
         <?php foreach ($top_played as $i => $s): ?>
-          <a href="/groovekut/player.php?id=<?= $s['id'] ?>" class="lib-row">
+          <!-- context=top locks queue to this most played playlist -->
+          <a href="/groovekut/player.php?id=<?= $s['id'] ?>&context=top&value=<?= urlencode($top_ids) ?>" class="lib-row">
             <span class="lib-row-num <?= $i < 3 ? 'top-'.$i : '' ?>"><?= $i + 1 ?></span>
             <div class="lib-row-cover">
               <?php if ($s['cover_path']): ?>
