@@ -56,12 +56,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     setcookie(
                         'remember_token',
                         $token,
-                        [
-                            'expires'  => time() + (30 * 24 * 60 * 60),
-                            'path'     => '/',
-                            'httponly' => true,
-                            'samesite' => 'Lax',
-                        ]
+                        time() + (30 * 24 * 60 * 60),  // 30 days
+                        '/',
+                        '',
+                        false,  // set true if HTTPS
+                        true    // httpOnly
                     );
                 }
 
@@ -124,6 +123,11 @@ require_once __DIR__ . '/../includes/header.php';
     </form>
 
     <p class="auth-switch">Don't have an account? <a href="/groovekut/auth/register.php">Sign up</a></p>
+    <p class="auth-switch" style="margin-top:10px;">
+      <a href="/groovekut/admin/" style="color:var(--text-3);font-size:12px;">
+        <i class="ri-shield-keyhole-line"></i> Admin Panel
+      </a>
+    </p>
 
   </div>
 </div>

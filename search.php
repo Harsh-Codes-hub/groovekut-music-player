@@ -80,7 +80,6 @@ require_once 'includes/header.php';
         class="search-input"
         placeholder="Song title or artist..."
         value="<?= htmlspecialchars($query) ?>"
-        autofocus
       />
       <?php if ($query): ?>
         <a href="/groovekut/search.php" class="search-clear" title="Clear">
@@ -213,18 +212,28 @@ require_once 'includes/header.php';
 </div>
 
 <script>
-// Live search on Enter or 500ms debounce
 const input = document.getElementById('search-input');
 let debounce;
+
+// Fix cursor going to front — move it to end of existing value on load
+if (input && input.value) {
+  const val = input.value;
+  input.value = '';
+  input.value = val;
+  input.selectionStart = input.selectionEnd = val.length;
+}
+
+// Focus input so user can keep typing immediately
+input.focus();
 
 input.addEventListener('input', () => {
   clearTimeout(debounce);
   debounce = setTimeout(() => {
-    const q    = input.value.trim();
-    const url  = new URL(window.location.href);
+    const q   = input.value.trim();
+    const url = new URL(window.location.href);
     url.searchParams.set('q', q);
     if (q.length > 1 || q === '') window.location.href = url.toString();
-  }, 500);
+  }, 600);
 });
 
 input.addEventListener('keydown', e => {
