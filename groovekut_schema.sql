@@ -205,4 +205,5 @@ INSERT INTO songs (title, artist, genre, mood_tag, is_explicit, manual_tags, fil
   ('I WANNA BE YOUR SLAVE', 'Måneskin', 'Rock', 'hype', 1, 'italian_rock,energy,anthem', 'uploads/songs/098-mneskin-i-wanna-be-your-slave.mp3', 'uploads/covers/098-mneskin-i-wanna-be-your-slave.jpg', 174),
   ('SEQUÊNCIA DO HOMEM-ARANHA', 'ÉoDan, Cavalheiro', 'Electronic', 'happy', 1, 'funk,dance,party', 'uploads/songs/099-odan-sequncia-do-homem-aranha.mp3', 'uploads/covers/099-odan-sequncia-do-homem-aranha.jpg', 169),
   ('Hear My Hope (feat. Alex Newell)', 'Hazbin Hotel, Shoba Narayan, Erika Henningsen, Keith David', 'Pop', 'happy', 1, 'musical,upbeat,feel_good', 'uploads/songs/100-hazbin-hotel-hear-my-hope-feat-alex.mp3', 'uploads/covers/100-hazbin-hotel-hear-my-hope-feat-alex.jpg', 310),
-  ('XLOWLY (SLOWED)', 'NY8', 'Electronic', 'chill', 0, 'phonk,slowed,late_night', 'uploads/songs/101-ny8-xlowly-slowed.mp3', 'uploads/covers/101-ny8-xlowly-slowed.jpg', 93);
+  ('XLOWLY (SLOWED)', 'NY8', 'Electronic', 'chill', 0, 'phonk,slowed,late_night', 'uploads/songs/101-ny8-xlowly-slowed.mp3', 'uploads/covers/101-ny8-xlowly-slowed.jpg', 93),
+  ('Shake That', 'Eminem, Nate Dogg', 'Hip-Hop', 'hype', 1, 'rap,party,throwback', 'uploads/songs/102-eminem-shake-that.mp3', 'uploads/covers/102-eminem-shake-that.jpg', 274);
