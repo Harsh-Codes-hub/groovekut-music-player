@@ -5,10 +5,10 @@
 // ============================================================
 
 require_once 'includes/session_helper.php';
-require_login();
 
-$mood     = current_mood();
-$username = $_SESSION['username'];
+$is_guest = !is_logged_in();
+$mood     = $is_guest ? 'chill' : current_mood();
+$username = $is_guest ? 'Guest' : (isset($_SESSION['username']) ? $_SESSION['username'] : 'there');
 
 $mood_labels = [
     'happy' => ['label' => 'Happy',  'emoji' => '😄'],
@@ -64,18 +64,32 @@ require_once 'includes/header.php';
 
   <!-- ── Results grid ────────────────────────────────────── -->
   <section class="rec-grid-section">
-    <div class="rec-grid" id="rec-grid">
-      <!-- Skeleton loaders -->
-      <?php for ($i = 0; $i < 20; $i++): ?>
-        <div class="rec-card skeleton"></div>
-      <?php endfor; ?>
-    </div>
 
-    <div class="rec-empty" id="rec-empty" style="display:none;">
-      <span class="empty-icon">🎵</span>
-      <p>Play a few songs first — GrooveKut needs data to build your recommendations.</p>
-      <a href="/groovekut/dashboard.php" class="btn-primary">Go Explore</a>
-    </div>
+    <?php if ($is_guest): ?>
+      <!-- Guest state — no recs without history -->
+      <div class="rec-empty" id="rec-empty">
+        <span class="empty-icon">🎯</span>
+        <p>Recommendations are personalised to your listening history. Sign up free to get yours.</p>
+        <div style="display:flex;gap:12px;justify-content:center;">
+          <a href="/groovekut/auth/register.php" class="btn-primary">Sign Up Free</a>
+          <a href="/groovekut/auth/login.php" class="btn-ghost">Log In</a>
+        </div>
+      </div>
+    <?php else: ?>
+      <div class="rec-grid" id="rec-grid">
+        <!-- Skeleton loaders -->
+        <?php for ($i = 0; $i < 20; $i++): ?>
+          <div class="rec-card skeleton"></div>
+        <?php endfor; ?>
+      </div>
+
+      <div class="rec-empty" id="rec-empty" style="display:none;">
+        <span class="empty-icon">🎵</span>
+        <p>Play a few songs first — GrooveKut needs data to build your recommendations.</p>
+        <a href="/groovekut/dashboard.php" class="btn-primary">Go Explore</a>
+      </div>
+    <?php endif; ?>
+
   </section>
 
 </div>
@@ -145,6 +159,7 @@ function buildCard(song, index) {
   card.innerHTML = `
     <div class="rec-cover">
       ${coverHTML}
+      <div class="rec-cover-overlay"><i class="ri-play-fill"></i></div>
       <span class="rec-rank">#${rankNum}</span>
     </div>
     <div class="rec-info">
@@ -197,7 +212,9 @@ moodChips.forEach(chip => {
 });
 
 // ── Initial load ──────────────────────────────────────────────
+<?php if (!$is_guest): ?>
 loadRecs('<?= $mood ?>');
+<?php endif; ?>
 </script>
 
 <?php require_once 'includes/footer.php'; ?>

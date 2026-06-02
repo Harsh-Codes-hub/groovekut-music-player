@@ -5,7 +5,9 @@
 // ============================================================
 
 require_once 'includes/session_helper.php';
-require_login();
+
+$is_guest = !is_logged_in();
+$uid      = $is_guest ? 0 : current_user_id();
 
 $query     = trim($_GET['q']     ?? '');
 $genre_f   = trim($_GET['genre'] ?? '');
@@ -44,8 +46,8 @@ if ($query !== '' || $genre_f !== '' || $mood_f !== '') {
                    COALESCE(ph.play_count, 0) AS play_count,
                    IF(ls.id IS NOT NULL, 1, 0) AS is_liked
             FROM songs s
-            LEFT JOIN play_history ph ON ph.song_id = s.id AND ph.user_id = " . current_user_id() . "
-            LEFT JOIN liked_songs ls  ON ls.song_id = s.id AND ls.user_id = " . current_user_id() . "
+            LEFT JOIN play_history ph ON ph.song_id = s.id AND ph.user_id = $uid
+            LEFT JOIN liked_songs ls  ON ls.song_id = s.id AND ls.user_id = $uid
             WHERE " . implode(' AND ', $where) . "
             ORDER BY play_count DESC, s.title ASC
             LIMIT 60";

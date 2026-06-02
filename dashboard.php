@@ -5,16 +5,18 @@
 // ============================================================
 
 require_once 'includes/session_helper.php';
-require_login();
 
-$user_id  = current_user_id();
-$username = $_SESSION['username'];
-$mood     = current_mood();
+$is_guest = !is_logged_in();
+$user_id  = $is_guest ? 0 : current_user_id();
+$username = $is_guest ? 'Guest' : ($_SESSION['username'] ?? 'there');
+$mood     = $is_guest ? 'chill' : current_mood();
 
 // ── Fetch play history count ──────────────────────────────────
 $history_count = 0;
-$res = $conn->query("SELECT COUNT(*) as c FROM play_history WHERE user_id = $user_id");
-if ($res) $history_count = $res->fetch_assoc()['c'];
+if (!$is_guest) {
+  $res = $conn->query("SELECT COUNT(*) as c FROM play_history WHERE user_id = $user_id");
+  if ($res) $history_count = $res->fetch_assoc()['c'];
+}
 
 // ── Greeting by time ─────────────────────────────────────────
 $hour = (int)date('G');
@@ -64,9 +66,9 @@ if ($history_count > 0) {
 
 // ── New user: pull 12 random songs to fill the library row ───
 $starter_songs = [];
-$preferred = $_SESSION['preferred_genres'] ?? null;
+$preferred = $is_guest ? null : ($_SESSION['preferred_genres'] ?? null);
 
-if (!$preferred) {
+if (!$is_guest && !$preferred) {
   $res = $conn->query("SELECT preferred_genres FROM users WHERE id = $user_id LIMIT 1");
   $row = $res->fetch_assoc();
   $preferred = $row['preferred_genres'] ?? null;
@@ -92,7 +94,7 @@ require_once 'includes/header.php';
 <!-- ══════════════════════════════════════════════════════════
      ONBOARDING MODAL — shows only on first login
 ═══════════════════════════════════════════════════════════════ -->
-<?php if (needs_onboarding()): ?>
+<?php if (!$is_guest && needs_onboarding()): ?>
   <div class="modal-overlay" id="onboarding-overlay">
     <div class="modal-card onboarding-card">
 
@@ -160,8 +162,7 @@ require_once 'includes/header.php';
             <button
               class="mood-picker-chip <?= $m === $mood ? 'active' : '' ?>"
               data-mood="<?= $m ?>"
-              role="menuitem"
-            >
+              role="menuitem">
               <span class="picker-chip-emoji"><?= $emoji ?></span>
               <span class="picker-chip-label"><?= $mood_labels[$m] ?></span>
             </button>
@@ -177,10 +178,10 @@ require_once 'includes/header.php';
     <div class="mood-row">
       <?php foreach ($moods as $m => $emoji): ?>
         <div class="mood-card mood-<?= $m ?> <?= $m === $mood ? 'active-mood' : '' ?>"
-             data-mood="<?= $m ?>"
-             role="button"
-             tabindex="0"
-             title="Set mood to <?= ucfirst($m) ?>">
+          data-mood="<?= $m ?>"
+          role="button"
+          tabindex="0"
+          title="Set mood to <?= ucfirst($m) ?>">
           <span class="mood-emoji"><?= $emoji ?></span>
           <span class="mood-name"><?= ucfirst($m) ?></span>
         </div>
@@ -268,158 +269,182 @@ require_once 'includes/header.php';
 <?php endif; ?>
 
 <script>
-// ════════════════════════════════════════════════════════════
-// Onboarding modal logic
-// ════════════════════════════════════════════════════════════
-const overlay = document.getElementById('onboarding-overlay');
-const saveBtn = document.getElementById('save-genres-btn');
-const skipBtn = document.getElementById('skip-onboarding-btn');
-const chips   = document.querySelectorAll('.genre-chip');
-let selected  = [];
+  // ════════════════════════════════════════════════════════════
+  // Onboarding modal logic
+  // ════════════════════════════════════════════════════════════
+  const overlay = document.getElementById('onboarding-overlay');
+  const saveBtn = document.getElementById('save-genres-btn');
+  const skipBtn = document.getElementById('skip-onboarding-btn');
+  const chips = document.querySelectorAll('.genre-chip');
+  let selected = [];
 
-if (chips.length) {
-  chips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      const genre = chip.dataset.genre;
-      if (chip.classList.contains('selected')) {
-        chip.classList.remove('selected');
-        selected = selected.filter(g => g !== genre);
-      } else if (selected.length < 3) {
-        chip.classList.add('selected');
-        selected.push(genre);
-      }
-      saveBtn.disabled = selected.length === 0;
+  if (chips.length) {
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        const genre = chip.dataset.genre;
+        if (chip.classList.contains('selected')) {
+          chip.classList.remove('selected');
+          selected = selected.filter(g => g !== genre);
+        } else if (selected.length < 3) {
+          chip.classList.add('selected');
+          selected.push(genre);
+        }
+        saveBtn.disabled = selected.length === 0;
+      });
     });
-  });
-}
+  }
 
-if (saveBtn) {
-  saveBtn.addEventListener('click', async () => {
-    const formData = new FormData();
-    selected.forEach(g => formData.append('genres[]', g));
-    const res  = await fetch('/groovekut/api/onboarding_save.php', { method: 'POST', body: formData });
-    const data = await res.json();
-    if (data.success) {
+  if (saveBtn) {
+    saveBtn.addEventListener('click', async () => {
+      const formData = new FormData();
+      selected.forEach(g => formData.append('genres[]', g));
+      const res = await fetch('/groovekut/api/onboarding_save.php', {
+        method: 'POST',
+        body: formData
+      });
+      const data = await res.json();
+      if (data.success) {
+        overlay.classList.add('fade-out');
+        setTimeout(() => overlay.remove(), 400);
+      }
+    });
+  }
+
+  if (skipBtn) {
+    skipBtn.addEventListener('click', async () => {
+      const formData = new FormData();
+      await fetch('/groovekut/api/onboarding_save.php', {
+        method: 'POST',
+        body: formData
+      });
       overlay.classList.add('fade-out');
       setTimeout(() => overlay.remove(), 400);
-    }
-  });
-}
+    });
+  }
 
-if (skipBtn) {
-  skipBtn.addEventListener('click', async () => {
-    const formData = new FormData();
-    await fetch('/groovekut/api/onboarding_save.php', { method: 'POST', body: formData });
-    overlay.classList.add('fade-out');
-    setTimeout(() => overlay.remove(), 400);
-  });
-}
+  // ════════════════════════════════════════════════════════════
+  // Mood cards — big squares set mood AND update badge
+  // ════════════════════════════════════════════════════════════
+  const moodCards = document.querySelectorAll('.mood-card[data-mood]');
 
-// ════════════════════════════════════════════════════════════
-// Mood cards — big squares set mood AND update badge
-// ════════════════════════════════════════════════════════════
-const moodCards = document.querySelectorAll('.mood-card[data-mood]');
+  moodCards.forEach(card => {
+    card.addEventListener('click', async () => {
+      const mood = card.dataset.mood;
 
-moodCards.forEach(card => {
-  card.addEventListener('click', async () => {
-    const mood = card.dataset.mood;
+      // Update all mood cards active state
+      moodCards.forEach(c => c.classList.remove('active-mood'));
+      card.classList.add('active-mood');
 
-    // Update all mood cards active state
-    moodCards.forEach(c => c.classList.remove('active-mood'));
-    card.classList.add('active-mood');
+      // Mirror to dropdown chips
+      pickerChips.forEach(c => {
+        c.classList.toggle('active', c.dataset.mood === mood);
+      });
 
-    // Mirror to dropdown chips
-    pickerChips.forEach(c => {
-      c.classList.toggle('active', c.dataset.mood === mood);
+      // Update badge
+      if (moodBadge && badgeLabel) {
+        moodBadge.className = `mood-badge mood-${mood}`;
+        moodBadge.id = 'mood-badge';
+        badgeLabel.textContent = `${moodNames[mood]} vibes`;
+      }
+
+      closePicker();
+
+      // POST to API
+      const fd = new FormData();
+      fd.append('mood', mood);
+      await fetch('/groovekut/api/mood.php', {
+        method: 'POST',
+        body: fd
+      });
     });
 
-    // Update badge
-    if (moodBadge && badgeLabel) {
-      moodBadge.className = `mood-badge mood-${mood}`;
-      moodBadge.id = 'mood-badge';
-      badgeLabel.textContent = `${moodNames[mood]} vibes`;
-    }
-
-    closePicker();
-
-    // POST to API
-    const fd = new FormData();
-    fd.append('mood', mood);
-    await fetch('/groovekut/api/mood.php', { method: 'POST', body: fd });
+    // Keyboard support
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') card.click();
+    });
   });
 
-  // Keyboard support
-  card.addEventListener('keydown', e => {
-    if (e.key === 'Enter' || e.key === ' ') card.click();
-  });
-});
 
+  const moodBadge = document.getElementById('mood-badge');
+  const moodPicker = document.getElementById('mood-picker');
+  const badgeLabel = document.getElementById('mood-badge-label');
+  const pickerChips = document.querySelectorAll('.mood-picker-chip');
 
-const moodBadge   = document.getElementById('mood-badge');
-const moodPicker  = document.getElementById('mood-picker');
-const badgeLabel  = document.getElementById('mood-badge-label');
-const pickerChips = document.querySelectorAll('.mood-picker-chip');
+  const moodEmojis = {
+    happy: '😄',
+    chill: '😌',
+    focus: '🎯',
+    sad: '🌧️',
+    hype: '🔥'
+  };
+  const moodNames = {
+    happy: 'Happy',
+    chill: 'Chill',
+    focus: 'Focus',
+    sad: 'Sad',
+    hype: 'Hype'
+  };
 
-const moodEmojis  = { happy:'😄', chill:'😌', focus:'🎯', sad:'🌧️', hype:'🔥' };
-const moodNames   = { happy:'Happy', chill:'Chill', focus:'Focus', sad:'Sad', hype:'Hype' };
+  let pickerOpen = false;
 
-let pickerOpen = false;
-
-function openPicker() {
-  pickerOpen = true;
-  moodPicker.classList.add('open');
-  moodBadge.setAttribute('aria-expanded', 'true');
-  moodPicker.setAttribute('aria-hidden', 'false');
-}
-
-function closePicker() {
-  pickerOpen = false;
-  moodPicker.classList.remove('open');
-  moodBadge.setAttribute('aria-expanded', 'false');
-  moodPicker.setAttribute('aria-hidden', 'true');
-}
-
-if (moodBadge) {
-  moodBadge.addEventListener('click', (e) => {
-    e.stopPropagation();
-    pickerOpen ? closePicker() : openPicker();
-  });
-}
-
-// Close on outside click
-document.addEventListener('click', (e) => {
-  if (pickerOpen && !moodPicker.contains(e.target)) {
-    closePicker();
+  function openPicker() {
+    pickerOpen = true;
+    moodPicker.classList.add('open');
+    moodBadge.setAttribute('aria-expanded', 'true');
+    moodPicker.setAttribute('aria-hidden', 'false');
   }
-});
 
-// Close on Escape
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && pickerOpen) closePicker();
-});
+  function closePicker() {
+    pickerOpen = false;
+    moodPicker.classList.remove('open');
+    moodBadge.setAttribute('aria-expanded', 'false');
+    moodPicker.setAttribute('aria-hidden', 'true');
+  }
 
-// Chip selection
-pickerChips.forEach(chip => {
-  chip.addEventListener('click', async () => {
-    const mood = chip.dataset.mood;
+  if (moodBadge) {
+    moodBadge.addEventListener('click', (e) => {
+      e.stopPropagation();
+      pickerOpen ? closePicker() : openPicker();
+    });
+  }
 
-    // Optimistic UI
-    pickerChips.forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-
-    // Update badge
-    moodBadge.className = `mood-badge mood-${mood}`;
-    moodBadge.id = 'mood-badge'; // keep ID
-    badgeLabel.textContent = `${moodNames[mood]} vibes`;
-
-    closePicker();
-
-    // POST to API
-    const fd = new FormData();
-    fd.append('mood', mood);
-    await fetch('/groovekut/api/mood.php', { method: 'POST', body: fd });
+  // Close on outside click
+  document.addEventListener('click', (e) => {
+    if (pickerOpen && !moodPicker.contains(e.target)) {
+      closePicker();
+    }
   });
-});
+
+  // Close on Escape
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && pickerOpen) closePicker();
+  });
+
+  // Chip selection
+  pickerChips.forEach(chip => {
+    chip.addEventListener('click', async () => {
+      const mood = chip.dataset.mood;
+
+      // Optimistic UI
+      pickerChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+
+      // Update badge
+      moodBadge.className = `mood-badge mood-${mood}`;
+      moodBadge.id = 'mood-badge'; // keep ID
+      badgeLabel.textContent = `${moodNames[mood]} vibes`;
+
+      closePicker();
+
+      // POST to API
+      const fd = new FormData();
+      fd.append('mood', mood);
+      await fetch('/groovekut/api/mood.php', {
+        method: 'POST',
+        body: fd
+      });
+    });
+  });
 </script>
 
 <?php require_once 'includes/footer.php'; ?>
