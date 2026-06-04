@@ -10,7 +10,7 @@ session_start();
 // ── Hardcoded admin credentials ───────────────────────────────
 // Change these before deployment
 define('ADMIN_USER', 'groovekut_admin');
-define('ADMIN_PASS', 'gk@admin2024');
+define('ADMIN_PASS', 'gk@admin2026');
 
 // Already logged in as admin
 if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
