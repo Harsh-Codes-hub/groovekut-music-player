@@ -1,209 +1,164 @@
-# GrooveKut 🎵
+# GrooveKut — Setup Guide 🎵
 
-A smart music recommendation player built for a college client. Discover music, get personalised recommendations, and vibe — the more you listen, the smarter it gets.
-
----
-
-## Stack
-
-| Layer | Tech |
-|---|---|
-| Frontend | HTML, CSS, JavaScript |
-| Backend | PHP (no frameworks) |
-| Database | MySQL via phpMyAdmin |
-| Local Server | XAMPP (Apache + MySQL) |
-| Icons | Remix Icons CDN |
-| Fonts | Inter (body) + Space Grotesk (display) |
+> First time setting this up? This guide gets you from zero to running in about 10 minutes.
 
 ---
 
-## Setup
+## What You Need
 
-1. Start **Apache** + **MySQL** in XAMPP Control Panel
-2. Open `http://localhost/phpmyadmin`
-3. Create database: `groovekut_db` (utf8mb4_unicode_ci)
-4. Import `groovekut_schema.sql` via Import tab
-5. Place `/groovekut/` folder inside `C:\xampp\htdocs\`
-6. Visit `http://localhost/groovekut/`
+- A Windows PC (this runs on XAMPP)
+- The GrooveKut project folder (this repo)
+- That's it
 
 ---
 
-## File Naming Convention
+## Step 1 — Install XAMPP
 
-Songs and covers follow a strict slug format:
+If you don't have XAMPP yet:
+
+1. Go to `https://www.apachefriends.org` and download XAMPP for Windows
+2. Run the installer, keep all defaults, install it
+3. Open **XAMPP Control Panel** (it's in your start menu or `C:\xampp\xampp-control.exe`)
+4. Click **Start** next to **Apache** and **MySQL** — both should turn green
+
+> If Apache won't start, something else is using port 80 (usually Skype or IIS). Fix: in XAMPP Control Panel → Apache → Config → httpd.conf → change `Listen 80` to `Listen 8080`. Then visit `http://localhost:8080/groovekut/` instead.
+
+---
+
+## Step 2 — Put the Project in the Right Place
+
+Take the `groovekut` folder and drop it here:
 
 ```
-{id}-{artist-slug}-{title-slug}.mp3   → uploads/songs/
-{id}-{artist-slug}-{title-slug}.jpg   → uploads/covers/
+C:\xampp\htdocs\groovekut\
 ```
 
-**Rules:** lowercase only, hyphens only, first/main artist, 3-digit ID matching DB row, strip all special chars.
+So the structure looks like:
 
-**Example:**
+```
+C:\xampp\htdocs\groovekut\
+  index.php
+  dashboard.php
+  player.php
+  ...
+```
+
+---
+
+## Step 3 — Set Up the Database
+
+1. Open your browser and go to `http://localhost/phpmyadmin`
+2. Click **New** in the left sidebar
+3. Name it `groovekut_db`
+4. Set collation to `utf8mb4_unicode_ci`
+5. Click **Create**
+6. Now click on `groovekut_db` in the left sidebar to select it
+7. Click the **Import** tab at the top
+8. Click **Choose File** → find `groovekut_schema.sql` inside the project folder
+9. Click **Go** at the bottom
+
+You should see a success message. The 6 tables are now created.
+
+---
+
+## Step 4 — Add Songs and Covers
+
+The project needs actual `.mp3` and `.jpg` files to work. Drop them here:
+
+```
+groovekut/uploads/songs/    ← .mp3 files
+groovekut/uploads/covers/   ← .jpg files
+```
+
+**File naming is strict** — every file must follow this format:
+
+```
+{id}-{artist-slug}-{title-slug}.mp3
+{id}-{artist-slug}-{title-slug}.jpg
+```
+
+Example:
 ```
 006-dua-lipa-dont-start-now.mp3
 006-dua-lipa-dont-start-now.jpg
 ```
 
----
+Rules:
+- Lowercase only
+- Hyphens instead of spaces
+- 3-digit ID that matches the song's row ID in the database
+- First/main artist only
+- No special characters
 
-## Folder Structure
-
-```
-/groovekut/
-  index.php                     ✅ Entry point — session check + redirect
-  dashboard.php                 ✅ Home — two states (new user / returning)
-  player.php                    ✅ Full page player — YouTube Music style
-  recommendations.php           ✅ Personalised rec page with mood switcher
-  search.php                       Phase 5
-  library.php                      Phase 5
-  profile.php                      Phase 5
-  groovekut_schema.sql          ✅ Run once in phpMyAdmin
-
-  auth/
-    login.php                   ✅ Login — username or email, remember-me cookie
-    register.php                ✅ Register — validation, auto-login after
-    logout.php                  ✅ Logout — clears session + cookie + DB token
-
-  api/
-    onboarding_save.php         ✅ Saves genre picks, sets onboarding_done = 1
-    log_play.php                ✅ Logs play after 10s, increments play_count
-    like.php                    ✅ Heart toggle — inserts/deletes liked_songs
-    session_check.php           ✅ Guest gate — 1 free play then login wall
-    get_queue.php               ✅ Builds queue — smart (genre+mood) or all songs
-    mood.php                    ✅ Mood API — GET current, POST to set + log
-    rec_engine.php              ✅ Scoring engine — play×1, liked×3, mood×2, genre×1.5
-
-  uploads/
-    songs/                      ← drop .mp3 files here
-    covers/                     ← drop .jpg files here
-
-  assets/
-    css/
-      style.css                 ✅ Full dark theme, CSS variables, all components
-    js/
-      player.js                 ✅ Full player logic — controls, queue, visualizer
-
-  includes/
-    db_connect.php              ✅ MySQLi connection, utf8mb4
-    session_helper.php          ✅ Auth helpers + cookie auto-login
-    header.php                  ✅ Sticky navbar, Remix Icons, active states
-    footer.php                  ✅ Shared close tags
-
-  admin/
-    index.php                      Phase 5 — admin login
-    dashboard.php                  Phase 5 — song list + play stats
-    add_song.php                   Phase 5 — upload form, auto-rename
-```
+> The easiest way to add songs is through the admin panel (Step 6) — it handles the renaming automatically.
 
 ---
 
-## Features Built
+## Step 5 — Open the Site
 
-### Auth
-- Register + login (username or email)
-- bcrypt password hashing
-- Remember me cookie (30 days)
-- Auto-login from cookie on return visit
-- First-login onboarding modal (genre picker — up to 3 genres)
+Go to `http://localhost/groovekut/` in your browser.
 
-### Dashboard
-- Two states — new user (browse + starter songs) vs returning user (mood rows + recently played + recs banner)
-- Starter songs stable per user — seeded by user ID or genre preference
-- Browse by genre cards
-- Mood badge in hero
+You should see the GrooveKut home page. If you see a blank page or error, check:
 
-### Recommendations + Mood
-- Weighted scoring engine — play_count ×1, liked ×3, mood match ×2, genre match ×1.5
-- Recommendations page with top 20 scored songs, rank badges, signal indicators
-- Score bar visualisation per card (liked ♥, mood ◉, genre ▣ signals shown)
-- Skeleton loading state while fetching
-- Mood switcher inline on rec page — switch mood, recs refresh instantly
-- Mood badge on dashboard hero — click to open dropdown picker
-- Mood logged to mood_log table + updates users.preferred_mood + session
-- Empty state for new users with no play history
-
-
-- Full page YouTube Music style
-- Cover art → Canvas color extraction → per-song radial gradient background
-- Web Audio API visualizer — frequency bars behind UI
-- Mood fallback gradients (happy=amber, chill=blue, hype=red, sad=purple, focus=teal)
-- Controls: play/pause, prev/next, seek bar, volume, mute
-- Loop: Off → All → One
-- Shuffle — current song pinned to position 0
-- Autoplay toggle
-- Smart Queue toggle — genre+mood filtered (101 songs) vs full library random
-- Queue panel — scrollable, active song highlighted, auto-scrolls to current
-- Play logged to DB after 10 seconds
-- Like/unlike heart toggle
-- Guest gate modal after 1 free play
-- Navbar now-playing indicator — pulsing dot + song title, clickable
-- Keyboard shortcuts: Space (play/pause), ←→ (seek ±10s), ↑↓ (volume), N (next), P (prev)
+- Apache and MySQL are both green in XAMPP
+- The folder is named exactly `groovekut` (not `groovekut-main` or `GrooveKut`)
+- The database was imported successfully in Step 3
 
 ---
 
-## Database — 6 Tables
+## Step 6 — Add Songs via Admin Panel
 
-| Table | Purpose |
-|---|---|
-| `users` | Accounts — username, email, bcrypt hash, preferred_genres, onboarding_done, remember_token |
-| `songs` | Master library — title, artist, genre, mood_tag, is_explicit, file_path, cover_path, duration |
-| `play_history` | Every play logged — user_id, song_id, play_count, played_at |
-| `liked_songs` | Heart clicks — user_id, song_id, liked_at |
-| `playlists` | Auto-generated playlists — mood, genre, liked types |
-| `mood_log` | Every mood pick — user_id, mood, logged_at |
+Instead of manually naming and dropping files, use the built-in admin panel:
 
----
+1. Go to `http://localhost/groovekut/admin/`
+2. Log in with the admin credentials
+3. Click **Add Song**
+4. Fill in the song details and upload the `.mp3` and cover `.jpg`
+5. The panel auto-renames the files to the correct slug format
 
-## Design System
-
-| Token | Value |
-|---|---|
-| Background | `#0e0e0e` |
-| Surface | `#161616` / `#1f1f1f` / `#2a2a2a` |
-| Accent | `#378ADD` |
-| Danger | `#e05c5c` |
-| Success | `#4caf82` |
-| Body font | Inter |
-| Display font | Space Grotesk |
-| Icons | Remix Icons (`ri-*`) |
+> First time? The admin account details are set directly in the database. Open phpMyAdmin → `groovekut_db` → `admins` table → insert a row with your username and a bcrypt-hashed password.
 
 ---
 
-## Phase Checklist
+## Step 7 — Create a User Account
 
-- [x] Phase 0 — XAMPP setup
-- [x] Phase 1 — DB schema + folder structure + db_connect + index.php
-- [x] Phase 2 — Auth system + onboarding + dashboard + CSS design system
-- [x] Phase 3 — Full player + queue engine + play logging + like system
-- [x] Phase 4 — Recommendation engine + mood picker
-- [ ] Phase 5 — Library + profile + search + admin panel
-- [ ] Phase 6 — UI polish pass
+1. Go to `http://localhost/groovekut/auth/register.php`
+2. Sign up with a username, email, and password
+3. On first login, pick up to 3 genres you like
+4. Start listening
 
 ---
 
-## Future Development
+## Common Issues
 
-1. Custom playlist management with drag-and-drop reordering
-2. Social features — follow users, shared playlists
-3. Lyrics sync via LRCLib API
-4. 5-band equalizer via Web Audio API
-5. Artist profile pages with bio, discography, cover art
-6. Normalized artist management — dedicated `artists` table, many-to-many with songs
-7. Auto-generated playlist covers — 4 song covers stitched 2×2 (Canvas API)
-8. User music uploads
-9. Browser push notifications — "New songs in your favourite genre"
-10. PWA + offline mode with service worker
-11. Cloud deployment + cross-device sync
-12. React Native mobile app (GrooveKut v2)
-13. Persistent bottom bar player (Spotify-style)
-14. Crossfade + gapless playback
-15. Sleep timer + playback speed control
+**Page shows "Connection failed"**
+→ MySQL isn't running. Open XAMPP Control Panel and start it.
+
+**Images not loading**
+→ Check that cover files are in `uploads/covers/` and named correctly.
+
+**Audio not playing**
+→ Check that mp3 files are in `uploads/songs/` and named correctly. Also check browser console for the file path.
+
+**Recommendations page is empty**
+→ Normal for new accounts. Play at least 5 songs first — the engine needs data.
+
+**Admin panel login not working**
+→ The admin account needs to be created manually in phpMyAdmin. See Step 6 above.
+
+**Fonts or icons look broken**
+→ Make sure `assets/fonts/` contains `Sora-Variable.woff2`, `Inter-Variable.woff2`, `remixicon.woff2`, and `remixicon.css`. These are local files, not CDN — they must be present.
 
 ---
 
-## Author
+## Quick Checklist
 
-**Frag the Architect**
-Solo indie developer — Rajasthan, India
-Built for a college client. Phase 3 approved by client. ❤️‍🔥
+- [ ] XAMPP installed, Apache + MySQL running
+- [ ] `groovekut` folder in `C:\xampp\htdocs\`
+- [ ] `groovekut_db` database created with `utf8mb4_unicode_ci`
+- [ ] `groovekut_schema.sql` imported successfully
+- [ ] Font files present in `assets/fonts/`
+- [ ] At least a few songs + covers in `uploads/`
+- [ ] Site opens at `http://localhost/groovekut/`
+
+If all boxes are checked, you're good. Enjoy the music. 🎧
